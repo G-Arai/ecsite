@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<link href="/css/style.css" rel="stylesheet" />
+<title>Insert title here</title>
+
+<script>
+  /*画面表示時に動作する処理群*/
+  document.addEventListener("DOMContentLoaded", event => {
+    /*商品情報の削除ボタンをすべて抽出しdeleteBtnに格納する。
+    削除ボタンは商品ごとに存在するため
+    全てのボタンにイベントリスナを登録しなければならない。
+    そのためquerySlectorAllメソッドを使い全てのボタンを配列として取得している。*/
+    const deleteBtns = document.querySelectorAll(".deleteBtn");
+    
+    //deleteBtnsをループさせ全てのボタンにイベントリスナを追加する
+    deleteBtns.forEach(btn => {
+      //clickイベントが発生したとき無名関数を呼び出すよう設定。
+      btn.addEventListener("click", event => {
+        let isOk = confirm("削除してもよろしいですか？");
+        if ( !isOk ) {return;}
+        
+        /*event.target(削除ボタン)の親要素のさらに親要素から
+        td要素を全て抽出しtdListに格納する。*/
+        const tdList = event.target.parentElement.parentElement.querySelectorAll("td");
+        //deleteGoods関数を呼び出し、商品情報を削除する。
+        deleteGoods(tdList);
+      })
+    })
+  });
+  //deleteGoods関数。削除ボタンのclickイベントで呼び出される。
+  function deleteGoods(tdList) {
+    //javaにPOST送信するオブジェクトを取得、設定する。
+    const postObj = {"id": tdList.item(0).innerText };
+    
+    /*fetch APIを使ってJavaと非同時通信を行う。
+    非同時通信処理をajaxやREST通信という
+      SUCCESS時(then):削除処理完了のアラートを表示し、画面上の商品情報の行を削除する。
+      ERROR時(catch) :エラー情報をconsoleに出力する。*/
+    fetch("/ecsite/admin/api/deleteGoods", {
+      method: "POST",
+      headers: { 'Content-Type': "application/json" },
+      body: JSON.stringify(postObj),
+    })
+    .then(response => response.text())
+    .then(result => {
+      //メッセージを囲むのはバッククォーテーションでシングルクォーテーションではない。
+      //バッククォーテーションは中に文字列と変数をそのまま入れられる。(+が必要ない)
+      alert(`商品 [ ${tdList.item(1).innerText} ] を削除しました。`);
+      tdList.item(0).parentElement.remove();
+    })
+    .catch(error => {
+      console.error("Error:", error);
+    })
+    
+  }
+</script>
+</head>
+<body>
+
+  <header>
+    <h1>EC Site -- 管理者ページ</h1>
+  </header>
+  
+  <table id="adminTable">
+    <thead>
+      <tr>
+        <th>ID</th><th>商品名</th><th>価格</th><th>削除</th>
+      </tr>
+    </thead>
+    
+    <tbody>
+      <tr th:each="item:${goods}">
+        <td th:text="${item.id}" />
+        <td th:text="${item.goodsName}" />
+        <td th:text="${item.price}" />
+        <td><button type="submit" class="deleteBtn">削除</button></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <form name="goodsForm" id="adminPage" method="post" action="/ecsite/admin/goodsMst">
+    <!--th:ifで分岐処理。以下はjavaから送られてきたuserNameがnullのとき新商品追加ボタンは作成されない-->
+    <button type="submit" th:if="${userName!=null}">新規商品追加</button>
+    <input type="hidden" name="userName" th:value="${userName}" />
+    <input type="hidden" name="password" th:value="${password}" />
+  </form>
+  
+</body>
+</html>
